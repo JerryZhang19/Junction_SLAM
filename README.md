@@ -1,4 +1,3 @@
-# A Simple Sparse Odometry Based RGBD Reconstruction
+# CS 294 course Project
 
-RGBD Sparse Visual Odometry Working now.
-Reconstruction still in progress.
+Combine wireframe detection and visual odometry
