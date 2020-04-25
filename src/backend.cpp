@@ -41,6 +41,15 @@ void Backend::BackendLoop() {
     }
 }
 
+//TODO： MergeJunction definition
+/*
+void Backend::MergeJunction()
+{
+
+
+}
+*/
+
 void Backend::Optimize(Map::KeyframesType &keyframes,
                        Map::LandmarksType &landmarks) {
     LOG(INFO) << "Backend optimization called";
@@ -167,6 +176,8 @@ void Backend::Optimize(Map::KeyframesType &keyframes,
     for (auto &v : vertices_landmarks) {
         landmarks.at(v.first)->SetPos(v.second->estimate());
     }
+
+    //TODO: Junction Merging function will be called here
 }
 
 }  // namespace myslam

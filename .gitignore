@@ -1,3 +1,8 @@
 /data
 /cmake-build-debug
 /cmake-build-release
+*.zip
+*.tar.xz
+.idea
+build
+bin/

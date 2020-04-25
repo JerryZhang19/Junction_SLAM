@@ -11,8 +11,7 @@ struct Frame;
 struct Feature;
 
 /**
- * 路标点类
- * 特征点在三角化之后形成路标点
+ * Map elements class
  */
 struct MapPoint {
    public:
@@ -56,5 +55,12 @@ struct MapPoint {
     static MapPoint::Ptr CreateNewMappoint();
 };
 }  // namespace myslam
+
+
+//TODO: Fill in proper class elements
+struct Junction{
+
+
+};
 
 #endif  // MYSLAM_MAPPOINT_H

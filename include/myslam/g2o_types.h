@@ -196,6 +196,8 @@ public:
 private:
 };
 
+//TODO: Class VertexJunction
+//TODO: Class EdgeSE3Junction
 
 
 

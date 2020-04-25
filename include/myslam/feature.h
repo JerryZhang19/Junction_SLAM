@@ -16,8 +16,7 @@ struct Frame;
 struct MapPoint;
 
 /**
- * 2D 特征点
- * 在三角化之后会被关联一个地图点
+ * 2D Feature Point
  */
 struct Feature {
    public:
@@ -42,5 +41,12 @@ struct Feature {
     Vec2 get_vec2(){return Vec2(position_.pt.x,position_.pt.y);}    
 };
 }  // namespace myslam
+
+
+// TODO: fill in proper class elements
+struct JunctionFeature{
+
+
+};
 
 #endif  // MYSLAM_FEATURE_H

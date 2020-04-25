@@ -130,6 +130,7 @@ int Frontend::InitializeNewPoints()  {
 }
 
 
+//TODO: Bundle Adjustment of Junction
 int Frontend::EstimateCurrentPose() {
     // setup g2o
     typedef g2o::BlockSolver_6_3 BlockSolverType;
@@ -223,7 +224,7 @@ int Frontend::EstimateCurrentPose() {
 
 
 
-
+//TODO: Optical Flow tracking of Junction
 int Frontend::TrackLastFrame() {
     std::vector<cv::Point2f> kps_last, kps_current;
     for (auto &kp : last_frame_->features_) {
@@ -235,7 +236,7 @@ int Frontend::TrackLastFrame() {
             kps_last.push_back(kp->position_.pt);
             kps_current.push_back(cv::Point2f(px[0], px[1]));
         } else {
-            //tracking already lost
+            //marked as outliers by optimization
             kps_last.push_back(kp->position_.pt);
             kps_current.push_back(kp->position_.pt);
         }
@@ -270,7 +271,7 @@ int Frontend::TrackLastFrame() {
 
 
 
-
+//TODO： Initialize 3D Junction by projecting to 3D using depth information
 bool Frontend::RgbdInit() {
     int num_features_left = DetectFeatures();
     //int num_coor_features = FindFeaturesInRight();
@@ -290,6 +291,7 @@ bool Frontend::RgbdInit() {
     return false;
 }
 
+//TODO: directly load Junction features detected by LCNN.
 int Frontend::DetectFeatures() {
     cv::Mat mask(current_frame_->img_.size(), CV_8UC1, 255);
     for (auto &feat : current_frame_->features_) {
@@ -319,65 +321,12 @@ int Frontend::DetectFeatures() {
     return cnt_detected;
 }
 
-/*
-int Frontend::FindFeaturesInRight() {
-    // use LK flow to estimate points in the right image
-    std::vector<cv::Point2f> kps_left, kps_right;
-    for (auto &kp : current_frame_->features_left_) {
-        kps_left.push_back(kp->position_.pt);
-        auto mp = kp->map_point_.lock();
-        if (mp) {
-            // use projected points as initial guess
-            auto px =
-                camera_right_->world2pixel(mp->pos_, current_frame_->Pose());
-            kps_right.push_back(cv::Point2f(px[0], px[1]));
-        } else {
-            // use same pixel in left iamge
-            kps_right.push_back(kp->position_.pt);
-        }
-    }
-
-    std::vector<uchar> status;
-    Mat error;
-    cv::calcOpticalFlowPyrLK(
-        current_frame_->left_img_, current_frame_->right_img_, kps_left,
-        kps_right, status, error, cv::Size(11, 11), 3,
-        cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30,
-                         0.01),
-        cv::OPTFLOW_USE_INITIAL_FLOW);
-
-    int num_good_pts = 0;
-    for (size_t i = 0; i < status.size(); ++i) {
-        if (status[i]) {
-            cv::KeyPoint kp(kps_right[i], 7);
-            Feature::Ptr feat(new Feature(current_frame_, kp));
-            feat->is_on_left_image_ = false;
-            current_frame_->features_right_.push_back(feat);
-            num_good_pts++;
-        } else {
-            current_frame_->features_right_.push_back(nullptr);
-        }
-    }
-    LOG(INFO) << "Find " << num_good_pts << " in the right image.";
-    return num_good_pts;
-}
-*/
 
 bool Frontend::BuildInitMap() {
     //SE3 pose= camera_->pose();
     size_t cnt_init_landmarks = 0;
     for (size_t i = 0; i < current_frame_->features_.size(); ++i) {
-        //if (current_frame_->features_right_[i] == nullptr) continue;
-        // create map point from triangulation
-        /*
-        std::vector<Vec3> points{
-            camera_left_->pixel2camera(
-                Vec2(current_frame_->features_left_[i]->position_.pt.x,
-                     current_frame_->features_left_[i]->position_.pt.y)),
-            camera_right_->pixel2camera(
-                Vec2(current_frame_->features_right_[i]->position_.pt.x,
-                     current_frame_->features_right_[i]->position_.pt.y))};
-        */
+
         Vec3 pworld = camera_->pixel2world(Vec2(current_frame_->features_[i]->position_.pt.x,
                 current_frame_->features_[i]->position_.pt.y),
                 camera_->pose_,// Identity SE3

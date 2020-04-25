@@ -45,6 +45,7 @@ include_directories(${GFLAGS_INCLUDE_DIRS})
 # csparse
 find_package(CSparse REQUIRED)
 include_directories(${CSPARSE_INCLUDE_DIR})
+message( ${CSPARSE_INCLUDE_DIR} )
 
 set(THIRD_PARTY_LIBS
         ${OpenCV_LIBS}
