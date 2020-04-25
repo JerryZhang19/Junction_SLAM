@@ -16,8 +16,8 @@ class Viewer;
 enum class FrontendStatus { INITING, TRACKING_GOOD, TRACKING_BAD, LOST };
 
 /**
- * 前端
- * 估计当前帧Pose，在满足关键帧条件时向地图加入关键帧并触发优化
+ * Frontend
+ * Estimate current pose. Insert keyframe, update map and trigger Backend.
  */
 class Frontend {
    public:
@@ -26,10 +26,10 @@ class Frontend {
 
     Frontend();
 
-    /// 外部接口，添加一个帧并计算其定位结果
+    /// Interface, add a frame and get pose
     bool AddFrame(Frame::Ptr frame);
 
-    /// Set函数
+    /// Set Function
     void SetMap(Map::Ptr map) { map_ = map; }
 
     void SetBackend(std::shared_ptr<Backend> backend) { backend_ = backend; }

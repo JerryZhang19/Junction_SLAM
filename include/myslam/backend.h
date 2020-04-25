@@ -13,37 +13,36 @@ namespace simpleslam {
 class Map;
 
 /**
- * 后端
- * 有单独优化线程，在Map更新时启动优化
- * Map更新由前端触发
+ * Backend
+ * Has a seperate thread, triggered when map is updated
+ * Map update is triggered by Frontend
  */ 
 class Backend {
    public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     typedef std::shared_ptr<Backend> Ptr;
 
-    /// 构造函数中启动优化线程并挂起
+    /// Constructor, start backend thread and do nothing.
     Backend();
 
-    // 设置左右目的相机，用于获得内外参
     void SetCamera(Camera::Ptr left) {
         cam_ = left;
     }
 
-    /// 设置地图
+    /// Set Map
     void SetMap(std::shared_ptr<Map> map) { map_ = map; }
 
-    /// 触发地图更新，启动优化
+    /// Trigger map update and start optimization
     void UpdateMap();
 
-    /// 关闭后端线程
+    /// Close backend tread
     void Stop();
 
    private:
-    /// 后端线程
+    /// Bakend tread
     void BackendLoop();
 
-    /// 对给定关键帧和路标点进行优化
+    /// Do optimization
     void Optimize(Map::KeyframesType& keyframes, Map::LandmarksType& landmarks);
 
     std::shared_ptr<Map> map_;
