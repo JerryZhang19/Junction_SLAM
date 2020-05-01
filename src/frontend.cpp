@@ -17,11 +17,16 @@ namespace simpleslam {
 
 inline Vec2 toVec2(const cv::Point2f p) { return Vec2(p.x, p.y); } //simple helper function
 
-Frontend::Frontend() {
+Frontend::Frontend():
+    context(1),
+    publisher(context, ZMQ_PUB)
+ {
     gftt_ =
         cv::GFTTDetector::create(Config::Get<int>("num_features"), 0.01, 20);
     num_features_init_ = Config::Get<int>("num_features_init");
     num_features_ = Config::Get<int>("num_features");
+
+    publisher.bind("tcp://127.0.0.1:5557");
 }
 
 bool Frontend::AddFrame(simpleslam::Frame::Ptr frame) {
@@ -318,6 +323,20 @@ int Frontend::DetectFeatures() {
     }
 
     LOG(INFO) << "Detect " << cnt_detected << " new features";
+
+
+    std::string encoded_msg;
+    RL::DataSet msg;
+    msg.set_count(cnt_detected);
+    msg.add_joint_position(1.1);
+    msg.add_joint_position(2.1);
+    msg.add_joint_velocity(-1.1);
+    msg.add_joint_velocity(-2.1);
+
+    msg.SerializeToString(&encoded_msg);
+
+    publisher.send(zmq::buffer(encoded_msg), zmq::send_flags::dontwait);
+
     return cnt_detected;
 }
 

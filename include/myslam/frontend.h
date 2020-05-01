@@ -4,6 +4,9 @@
 
 #include <opencv2/features2d.hpp>
 
+#include <build/msg.pb.h>
+#include <zmq.hpp>
+
 #include "myslam/common_include.h"
 #include "myslam/frame.h"
 #include "myslam/map.h"
@@ -133,6 +136,11 @@ class Frontend {
 
     // utilities
     cv::Ptr<cv::GFTTDetector> gftt_;  // feature detector in opencv
+
+    // zmq
+    zmq::context_t context;
+    zmq::socket_t publisher;
+
 };
 
 }  // namespace myslam

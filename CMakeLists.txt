@@ -47,6 +47,19 @@ find_package(CSparse REQUIRED)
 include_directories(${CSPARSE_INCLUDE_DIR})
 message( ${CSPARSE_INCLUDE_DIR} )
 
+# cppzmq
+find_package(cppzmq)
+include_directories(${cppzmq_INCLUDE_DIR})
+
+# protobuf
+find_package(Protobuf)
+include_directories(${Protobuf_INCLUDE_DIR})
+include_directories("${PROJECT_SOURCE_DIR}")
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+PROTOBUF_GENERATE_CPP(PROTO_SRC PROTO_HEADER proto/msg.proto)
+ADD_LIBRARY(proto ${PROTO_HEADER} ${PROTO_SRC})
+
 set(THIRD_PARTY_LIBS
         ${OpenCV_LIBS}
         ${Sophus_LIBRARIES}
@@ -57,6 +70,9 @@ set(THIRD_PARTY_LIBS
         ${GFLAGS_LIBRARIES}
         pthread
         ${CSPARSE_LIBRARY}
+        proto
+        ${Protobuf_LIBRARIES}
+        cppzmq
         )
 
 enable_testing()
