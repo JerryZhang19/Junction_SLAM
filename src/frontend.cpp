@@ -165,7 +165,7 @@ int Frontend::EstimateCurrentPose() {
         if (mp) {
             features.push_back(current_frame_->features_[i]);
             EdgeProjectionPoseOnly *edge =
-                new EdgeProjectionPoseOnly(mp->pos_, K);
+                new EdgeProjectionPoseOnly(mp->Pos(), K);
             edge->setId(index);
             edge->setVertex(0, vertex_pose);
             edge->setMeasurement(
@@ -237,7 +237,7 @@ int Frontend::TrackLastFrame() {
             // use project point
             auto mp = kp->map_point_.lock();
             auto px =
-                camera_->world2pixel(mp->pos_, current_frame_->Pose());
+                camera_->world2pixel(mp->Pos(), current_frame_->Pose());
             kps_last.push_back(kp->position_.pt);
             kps_current.push_back(cv::Point2f(px[0], px[1]));
         } else {

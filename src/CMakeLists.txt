@@ -1,6 +1,6 @@
 add_library(simpleslam SHARED
         frame.cpp
-        mappoint.cpp
+        map_element.cpp
         map.cpp
         camera.cpp
         config.cpp

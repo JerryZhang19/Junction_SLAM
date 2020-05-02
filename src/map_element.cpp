@@ -17,7 +17,7 @@
  *
  */
 
-#include "myslam/mappoint.h"
+#include "myslam/map_element.h"
 #include "myslam/feature.h"
 
 namespace simpleslam {
@@ -44,4 +44,24 @@ void MapPoint::RemoveObservation(std::shared_ptr<Feature> feat) {
     }
 }
 
-}  // namespace myslam
+Junction3D::Ptr Junction3D::CreateNewJunction3D() {
+    static long factory_id = 0;
+    Junction3D::Ptr new_junction3d(new Junction3D);
+    new_junction3d->id_ = factory_id++;
+    return new_junction3d;
+}
+
+void Junction3D::RemoveObservation(std::shared_ptr<Junction2D> j2d) {
+    std::unique_lock<std::mutex> lck(data_mutex_);
+    for (auto iter = observations_.begin(); iter != observations_.end();
+         iter++) {
+        if (iter->lock() == j2d) {
+            observations_.erase(iter);
+            j2d->junction3D_.reset();
+            observed_times_--;
+            break;
+        }
+    }
+}
+
+}

@@ -7,7 +7,7 @@
 #include "myslam/feature.h"
 #include "myslam/g2o_types.h"
 #include "myslam/map.h"
-#include "myslam/mappoint.h"
+#include "myslam/map_element.h"
 
 namespace simpleslam {
 
