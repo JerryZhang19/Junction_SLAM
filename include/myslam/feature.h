@@ -23,7 +23,7 @@ struct Feature {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     typedef std::shared_ptr<Feature> Ptr;
 
-    std::weak_ptr<Frame> frame_;         // 持有该feature的frame
+    std::weak_ptr<Frame> frame_;         // frame that hold this feature
     cv::KeyPoint position_;              // 2D提取位置
     std::weak_ptr<MapPoint> map_point_;  // 关联地图点
 

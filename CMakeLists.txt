@@ -11,6 +11,9 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 ############### dependencies ######################
+
+INCLUDE(FindProtobuf)
+
 # Eigen
 include_directories("/usr/include/eigen3")
 
@@ -47,18 +50,21 @@ find_package(CSparse REQUIRED)
 include_directories(${CSPARSE_INCLUDE_DIR})
 message( ${CSPARSE_INCLUDE_DIR} )
 
+
 # cppzmq
-find_package(cppzmq)
-include_directories(${cppzmq_INCLUDE_DIR})
+#find_package(cppzmq)
+#include_directories(${cppzmq_INCLUDE_DIR})
 
 # protobuf
-find_package(Protobuf)
+find_package(Protobuf REQUIRED)
 include_directories(${Protobuf_INCLUDE_DIR})
 include_directories("${PROJECT_SOURCE_DIR}")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 PROTOBUF_GENERATE_CPP(PROTO_SRC PROTO_HEADER proto/msg.proto)
 ADD_LIBRARY(proto ${PROTO_HEADER} ${PROTO_SRC})
+
+
 
 set(THIRD_PARTY_LIBS
         ${OpenCV_LIBS}
@@ -72,7 +78,7 @@ set(THIRD_PARTY_LIBS
         ${CSPARSE_LIBRARY}
         proto
         ${Protobuf_LIBRARIES}
-        cppzmq
+        #cppzmq
         )
 
 enable_testing()
