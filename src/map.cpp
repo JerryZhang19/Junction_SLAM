@@ -22,6 +22,8 @@
 
 namespace simpleslam {
 
+// TODO: Map Management of Wireframe
+
 void Map::InsertKeyFrame(Frame::Ptr frame) {
     current_frame_ = frame;
     if (keyframes_.find(frame->keyframe_id_) == keyframes_.end()) {
@@ -49,7 +51,7 @@ void Map::InsertMapPoint(MapPoint::Ptr map_point) {
 
 void Map::RemoveOldKeyframe() {
     if (current_frame_ == nullptr) return;
-    // 寻找与当前帧最近与最远的两个关键帧
+    // find the closest and farthest key frame
     double max_dis = 0, min_dis = 9999;
     double max_kf_id = 0, min_kf_id = 0;
     auto Twc = current_frame_->Pose().inverse();
@@ -69,10 +71,10 @@ void Map::RemoveOldKeyframe() {
     const double min_dis_th = 0.2;  // 最近阈值
     Frame::Ptr frame_to_remove = nullptr;
     if (min_dis < min_dis_th) {
-        // 如果存在很近的帧，优先删掉最近的
+        // if very close frame exists, remove it
         frame_to_remove = keyframes_.at(min_kf_id);
     } else {
-        // 删掉最远的
+        // remove farthest
         frame_to_remove = keyframes_.at(max_kf_id);
     }
 

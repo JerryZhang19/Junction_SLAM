@@ -39,8 +39,10 @@ class Viewer {
 
     void DrawFrame(Frame::Ptr frame, const float* color);
 
+
+
     void DrawMapPoints();
-    //TODO: Add Proper Wireframe Visualization
+    void DrawJunction();
 
     void FollowCurrentFrame(pangolin::OpenGlRenderState& vis_camera);
 

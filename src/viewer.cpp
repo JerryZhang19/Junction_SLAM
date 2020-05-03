@@ -144,6 +144,23 @@ void Viewer::DrawFrame(Frame::Ptr frame, const float* color) {
     glPopMatrix();
 }
 
+void Viewer::DrawJunction() {
+    const float red[3] = {1.0, 0, 0};
+    for (auto& kf : active_keyframes_) {
+        DrawFrame(kf.second, red);
+    }
+
+    glPointSize(2);
+    glBegin(GL_POINTS);
+    for (auto& landmark : active_landmarks_) {
+        auto pos = landmark.second->Pos();
+        glColor3f(red[0], red[1], red[2]);
+        glVertex3d(pos[0], pos[1], pos[2]);
+    }
+    glEnd();
+}
+
+
 void Viewer::DrawMapPoints() {
     const float red[3] = {1.0, 0, 0};
     for (auto& kf : active_keyframes_) {
@@ -159,5 +176,7 @@ void Viewer::DrawMapPoints() {
     }
     glEnd();
 }
+
+
 
 }  // namespace myslam

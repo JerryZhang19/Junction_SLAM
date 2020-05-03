@@ -11,6 +11,7 @@ namespace simpleslam {
 // forward declare
 struct MapPoint;
 struct Feature;
+struct Junction2D;
 
 /**
  * 帧
@@ -36,9 +37,10 @@ public:
     std::mutex pose_mutex_;          // Pose数据锁
     cv::Mat img_, depth_;   // gray depth image
 
-    // extracted features in left image
+    // extracted features
     std::vector<std::shared_ptr<Feature>> features_;
-
+    // extracted junctions
+    std::vector<std::shared_ptr<Junction2D>> junctions_;
 
    public:  // data members
     Frame() {}
