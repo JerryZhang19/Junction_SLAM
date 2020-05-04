@@ -22,8 +22,6 @@
 
 namespace simpleslam {
 
-// TODO: Map Management of Wireframe
-
 void Map::InsertKeyFrame(Frame::Ptr frame) {
     current_frame_ = frame;
     if (keyframes_.find(frame->keyframe_id_) == keyframes_.end()) {
@@ -50,7 +48,13 @@ void Map::InsertMapPoint(MapPoint::Ptr map_point) {
 }
 
 void Map::InsertMapJunction(Junction3D::Ptr map_junction) {
-    LOG(INFO)<<"I'm not implemented";
+    if (landmarks_.find(map_junction->id_) == landmarks_.end()) {
+        junctions_.insert(make_pair(map_junction->id_, map_junction));
+        active_junctions_.insert(make_pair(map_junction->id_, map_junction));
+    } else {
+        junctions_[map_junction->id_] = map_junction;
+        active_junctions_[map_junction->id_] = map_junction;
+    }
 }
 
 void Map::RemoveOldKeyframe() {
@@ -72,7 +76,7 @@ void Map::RemoveOldKeyframe() {
         }
     }
 
-    const double min_dis_th = 0.2;  // 最近阈值
+    const double min_dis_th = 0.2;  // threshold
     Frame::Ptr frame_to_remove = nullptr;
     if (min_dis < min_dis_th) {
         // if very close frame exists, remove it
@@ -89,6 +93,13 @@ void Map::RemoveOldKeyframe() {
         auto mp = feat->map_point_.lock();
         if (mp) {
             mp->RemoveObservation(feat);
+        }
+    }
+
+    for (const auto &junct : frame_to_remove->junctions_) {
+        auto junct3D = junct->junction3D_.lock();
+        if (junct3D) {
+            junct3D->RemoveObservation(junct);
         }
     }
 

@@ -10,7 +10,7 @@ namespace simpleslam {
 
 /**
  * @brief Map
- * Interaction with Map：前
+ * Interaction with Map：
  * Frontend calls InsertKeyframe and InsertMapPoint, Backend manage structure of map, mark as outlier and remove.
  */
 class Map {
@@ -48,6 +48,16 @@ class Map {
     KeyframesType GetActiveKeyFrames() {
         std::unique_lock<std::mutex> lck(data_mutex_);
         return active_keyframes_;
+    }
+
+    JunctionsType GetAllJunctions() {
+        std::unique_lock<std::mutex> lck(data_mutex_);
+        return junctions_;
+    }
+
+    JunctionsType GetactiveJUnctions() {
+        std::unique_lock<std::mutex> lck(data_mutex_);
+        return active_junctions_;
     }
 
     void CleanMap();

@@ -55,7 +55,7 @@ bool Frontend::Track() {
     }
 
     int num_track_points = TrackFeaturePoints();
-    int num_track_junctions = TrackJunction();
+    int num_track_junctions = TrackJunctions();
 
     tracking_inliers_ = EstimateCurrentPose();
 
@@ -90,8 +90,9 @@ bool Frontend::InsertKeyframe() {
               << current_frame_->keyframe_id_;
 
     SetObservationsForKeyFrame();
-    DetectFeatures();  // detect new features
 
+    DetectFeatures();
+    DetectJunctions();
     InitializeNewPoints();
     InitializeNewJunctions();
 
@@ -106,6 +107,10 @@ void Frontend::SetObservationsForKeyFrame() {
     for (auto &feat : current_frame_->features_) {
         auto mp = feat->map_point_.lock();
         if (mp) mp->AddObservation(feat);
+    }
+    for (auto &junct : current_frame_->junctions_) {
+        auto mp = junct->junction3D_.lock();
+        if (mp) mp->AddObservation(junct);
     }
 }
 
@@ -132,7 +137,6 @@ int Frontend::InitializeNewPoints()  {
     return cnt_triangulated_pts;
 }
 
-// TODO
 int Frontend::InitializeNewJunctions()  {
     SE3 current_pose_Twc = current_frame_->Pose().inverse();
     int cnt_junctions = 0;
@@ -273,13 +277,13 @@ int Frontend::TrackFeaturePoints() {
     return num_good_pts;
 }
 
-int Frontend::TrackJunction(){
+int Frontend::TrackJunctions(){
     std::vector<cv::Point2f> jcs_last, jcs_current;
-    for (auto &jc : last_frame_->junctions_) {
+    for (auto &junct : last_frame_->junctions_) {
         //do something
     }
     //do something
-    LOG(INFO) << "TrackJunction not implemented";
+    LOG(INFO) << "TrackJunctions not implemented";
     return 0;
 }
 
@@ -317,14 +321,12 @@ int Frontend::DetectFeatures() {
     gftt_->detect(current_frame_->img_, keypoints, mask);
     int cnt_detected = 0;
     for (auto &kp : keypoints) {
-        //std::cout<<"debug: kp.pt"<<kp.pt<<std::endl;
         auto position = cv::Point2d(kp.pt);
         int depth = current_frame_->depth_.at<unsigned short>(position);
         //std::cout<<"index:"<<cv::Point2d(kp.pt)<<std::endl;
 
         if(depth<=Frame::max_depth&&depth>=Frame::min_depth)
         {
-            //std::cout<<"depth:"<<depth<<std::endl;
             current_frame_->features_.push_back(
                 Feature::Ptr(new Feature(current_frame_, kp,double(depth)/1000.0)));
             cnt_detected++;

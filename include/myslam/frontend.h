@@ -68,7 +68,7 @@ class Frontend {
      * Track with last frame
      * @return num of tracked junctions
      */
-    int TrackJunction();
+    int TrackJunctions();
 
     /**
      * estimate current frame's pose
