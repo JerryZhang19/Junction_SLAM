@@ -14,4 +14,4 @@ For MergeJunctions, adding a pointer of other junctions may be needed, may consi
 
 The purpose of MergeJunctions is to connect Junctions together, this may be useful for more precise Bundle Adjustment or meaningful reconstruction.
 
-I'm going to implement and test TrackJunctions, together with DetectJunctions, we can have a minimum visually working system.
+I'm going to implement and test TrackJunctions, together with DetectJunctions and InitializeNewJunctions, we can have a minimum visually working system.
