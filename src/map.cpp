@@ -49,6 +49,10 @@ void Map::InsertMapPoint(MapPoint::Ptr map_point) {
     }
 }
 
+void Map::InsertMapJunction(Junction3D::Ptr map_junction) {
+    LOG(INFO)<<"I'm not implemented";
+}
+
 void Map::RemoveOldKeyframe() {
     if (current_frame_ == nullptr) return;
     // find the closest and farthest key frame

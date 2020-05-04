@@ -19,12 +19,15 @@ class Map {
     typedef std::shared_ptr<Map> Ptr;
     typedef std::unordered_map<unsigned long, MapPoint::Ptr> LandmarksType;
     typedef std::unordered_map<unsigned long, Frame::Ptr> KeyframesType;
+    typedef std::unordered_map<unsigned long, Junction3D::Ptr> JunctionsType;
 
     Map() {}
 
     void InsertKeyFrame(Frame::Ptr frame);
 
     void InsertMapPoint(MapPoint::Ptr map_point);
+
+    void InsertMapJunction(Junction3D::Ptr);
 
 
     LandmarksType GetAllMapPoints() {
@@ -47,11 +50,9 @@ class Map {
         return active_keyframes_;
     }
 
-    /// 清理map中观测数量为零的点
     void CleanMap();
 
    private:
-    // 将旧的关键帧置为不活跃状态
     void RemoveOldKeyframe();
 
     std::mutex data_mutex_;
@@ -59,6 +60,8 @@ class Map {
     LandmarksType active_landmarks_;  // active landmarks
     KeyframesType keyframes_;         // all key-frames
     KeyframesType active_keyframes_;  // all key-frames
+    JunctionsType junctions_;         // all landmarks
+    JunctionsType active_junctions_;  // active landmarks
 
     Frame::Ptr current_frame_ = nullptr;
 

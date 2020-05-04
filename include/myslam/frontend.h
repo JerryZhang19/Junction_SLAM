@@ -62,7 +62,13 @@ class Frontend {
      * Track with last frame
      * @return num of tracked points
      */
-    int TrackLastFrame();
+    int TrackFeaturePoints();
+
+    /**
+     * Track with last frame
+     * @return num of tracked junctions
+     */
+    int TrackJunction();
 
     /**
      * estimate current frame's pose
@@ -80,32 +86,34 @@ class Frontend {
      * Try init the frontend with stereo images saved in current_frame_
      * @return true if success
      */
-    bool RgbdInit();
+    bool InitializeMap();
 
     /**
-     * Detect features in left image in current_frame_
+     * Detect features in the image in current_frame_
      * keypoints will be saved in current_frame_
      * @return
      */
     int DetectFeatures();
 
     /**
-     * Find the corresponding features in right image of current_frame_
-     * @return num of features found
+     * Detect junctions in the image in current_frame_
+     * junctions will be saved in current_frame_
+     * @return
      */
-    int FindFeaturesInRight();
+    int DetectJunctions();
+
 
     /**
-     * Build the initial map with single image
-     * @return true if succeed
-     */
-    bool BuildInitMap();
-
-    /**
-     * Triangulate the 2D points in current frame
-     * @return num of triangulated points
+     * Read Out depth of the 2D points in current frame
+     * @return num of valid points
      */
     int InitializeNewPoints();
+
+    /**
+     * Read Out depth of the 2D junctions in current frame
+     * @return num of valid junctions
+     */
+    int InitializeNewJunctions();
 
     /**
      * Set the features in keyframe as new observation of the map points

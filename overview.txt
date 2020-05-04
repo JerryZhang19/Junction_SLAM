@@ -1,0 +1,3 @@
+Frontend: DetectJunctions InitializeNewJunctions (call InsertMapJunction) TrackJunctions
+Map: InsertMapJunction
+Backend: MergeJunctions

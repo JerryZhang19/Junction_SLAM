@@ -34,7 +34,7 @@ bool Frontend::AddFrame(simpleslam::Frame::Ptr frame) {
 
     switch (status_) {
         case FrontendStatus::INITING:
-            RgbdInit();
+            InitializeMap();
             break;
         case FrontendStatus::TRACKING_GOOD:
         case FrontendStatus::TRACKING_BAD:
@@ -50,12 +50,13 @@ bool Frontend::AddFrame(simpleslam::Frame::Ptr frame) {
 }
 
 bool Frontend::Track() {
-    LOG(INFO)<<"Track() starts";
     if (last_frame_) {
         current_frame_->SetPose(relative_motion_ * last_frame_->Pose());
     }
 
-    int num_track_last = TrackLastFrame();
+    int num_track_points = TrackFeaturePoints();
+    int num_track_junctions = TrackJunction();
+
     tracking_inliers_ = EstimateCurrentPose();
 
     if (tracking_inliers_ > num_features_tracking_) {
@@ -73,7 +74,6 @@ bool Frontend::Track() {
     relative_motion_ = current_frame_->Pose() * last_frame_->Pose().inverse();
 
     if (viewer_) viewer_->AddCurrentFrame(current_frame_);
-    LOG(INFO)<<"Track() ends";
     return true;
 }
 
@@ -93,7 +93,8 @@ bool Frontend::InsertKeyframe() {
     DetectFeatures();  // detect new features
 
     InitializeNewPoints();
-    // update backend because we have a new keyframe
+    InitializeNewJunctions();
+
     backend_->UpdateMap();
 
     if (viewer_) viewer_->UpdateMap();
@@ -110,12 +111,10 @@ void Frontend::SetObservationsForKeyFrame() {
 
 
 int Frontend::InitializeNewPoints()  {
-    //std::vector<SE3> poses{camera_left_->pose(), camera_right_->pose()};
     SE3 current_pose_Twc = current_frame_->Pose().inverse();
     int cnt_triangulated_pts = 0;
     for (size_t i = 0; i < current_frame_->features_.size(); ++i) {
         if (current_frame_->features_[i]->map_point_.expired()) {
-            // 左图的特征点未关联地图点，读出深度转为坐标
             Vec3 pworld = camera_->pixel2world(current_frame_->features_[i]->get_vec2(),
                                                camera_->pose_,// Identity SE3
                                                current_frame_->features_[i]->init_depth_); // use depth sensor only to init
@@ -124,7 +123,6 @@ int Frontend::InitializeNewPoints()  {
             pworld = current_pose_Twc * pworld;
             new_map_point->SetPos(pworld);
             new_map_point->AddObservation(current_frame_->features_[i]);
-            //new_map_point->AddObservation(current_frame_->features_[i]);
             current_frame_->features_[i]->map_point_ = new_map_point;
             map_->InsertMapPoint(new_map_point);
             cnt_triangulated_pts++;
@@ -132,6 +130,15 @@ int Frontend::InitializeNewPoints()  {
     }
     LOG(INFO) << "new landmarks: " << cnt_triangulated_pts;
     return cnt_triangulated_pts;
+}
+
+// TODO
+int Frontend::InitializeNewJunctions()  {
+    SE3 current_pose_Twc = current_frame_->Pose().inverse();
+    int cnt_junctions = 0;
+    //do something
+    LOG(INFO) << "InitializeNewJunctions not implemented " ;
+    return cnt_junctions;
 }
 
 
@@ -206,16 +213,13 @@ int Frontend::EstimateCurrentPose() {
                 e->setRobustKernel(nullptr);
             }
         }
-        LOG(INFO) << "Outlier/Inlier in pose estimating: " << cnt_outlier << "/"
-                  << features.size() - cnt_outlier;
     }
-
     LOG(INFO) << "Outlier/Inlier in pose estimating: " << cnt_outlier << "/"
               << features.size() - cnt_outlier;
     // Set pose and outlier
     current_frame_->SetPose(vertex_pose->estimate());
 
-    LOG(INFO) << "Current Pose = \n" << current_frame_->Pose().matrix();
+    //LOG(INFO) << "Current Pose = \n" << current_frame_->Pose().matrix();
 
     for (auto &feat : features) {
         if (feat->is_outlier_) {
@@ -226,11 +230,7 @@ int Frontend::EstimateCurrentPose() {
     return features.size() - cnt_outlier;
 }
 
-
-
-
-//TODO: Optical Flow tracking of Junction
-int Frontend::TrackLastFrame() {
+int Frontend::TrackFeaturePoints() {
     std::vector<cv::Point2f> kps_last, kps_current;
     for (auto &kp : last_frame_->features_) {
         if (kp->map_point_.lock()) {
@@ -269,34 +269,43 @@ int Frontend::TrackLastFrame() {
             num_good_pts++;
         }
     }
-
     LOG(INFO) << "Find " << num_good_pts << " in the last image.";
     return num_good_pts;
 }
 
+int Frontend::TrackJunction(){
+    std::vector<cv::Point2f> jcs_last, jcs_current;
+    for (auto &jc : last_frame_->junctions_) {
+        //do something
+    }
+    //do something
+    LOG(INFO) << "TrackJunction not implemented";
+    return 0;
+}
 
 
-//TODO： Initialize 3D Junction by projecting to 3D using depth information
-bool Frontend::RgbdInit() {
-    int num_features_left = DetectFeatures();
-    //int num_coor_features = FindFeaturesInRight();
-    if (num_features_left < num_features_init_) {
+bool Frontend::InitializeMap() {
+    int num_features = DetectFeatures();
+    int num_junctios = DetectJunctions();
+
+    if (num_features < num_features_init_) {
         return false;
     }
 
-    bool build_map_success = BuildInitMap();
-    if (build_map_success) {
-        status_ = FrontendStatus::TRACKING_GOOD;
-        if (viewer_) {
-            viewer_->AddCurrentFrame(current_frame_);
-            viewer_->UpdateMap();
-        }
-        return true;
+    InitializeNewPoints();
+    InitializeNewJunctions();
+    current_frame_->SetKeyFrame();
+    map_->InsertKeyFrame(current_frame_);
+    backend_->UpdateMap();
+
+    status_ = FrontendStatus::TRACKING_GOOD;
+    if (viewer_) {
+        viewer_->AddCurrentFrame(current_frame_);
+        viewer_->UpdateMap();
     }
-    return false;
+    return true;
 }
 
-//TODO: directly load Junction features detected by LCNN.
 int Frontend::DetectFeatures() {
     cv::Mat mask(current_frame_->img_.size(), CV_8UC1, 255);
     for (auto &feat : current_frame_->features_) {
@@ -324,7 +333,6 @@ int Frontend::DetectFeatures() {
 
     LOG(INFO) << "Detect " << cnt_detected << " new features";
 
-
     std::string encoded_msg;
     RL::DataSet msg;
     msg.set_count(cnt_detected);
@@ -340,35 +348,10 @@ int Frontend::DetectFeatures() {
     return cnt_detected;
 }
 
-
-bool Frontend::BuildInitMap() {
-    //SE3 pose= camera_->pose();
-    size_t cnt_init_landmarks = 0;
-    for (size_t i = 0; i < current_frame_->features_.size(); ++i) {
-
-        Vec3 pworld = camera_->pixel2world(Vec2(current_frame_->features_[i]->position_.pt.x,
-                current_frame_->features_[i]->position_.pt.y),
-                camera_->pose_,// Identity SE3
-                current_frame_->features_[i]->init_depth_); // use depth sensor only to init
-        //std::cout<<"pworld:"<<pworld<<std::endl;
-
-        auto new_map_point = MapPoint::CreateNewMappoint();
-        new_map_point->SetPos(pworld);
-        new_map_point->AddObservation(current_frame_->features_[i]);
-
-        current_frame_->features_[i]->map_point_ = new_map_point;
-        cnt_init_landmarks++;
-        map_->InsertMapPoint(new_map_point);
-    }
-    current_frame_->SetKeyFrame();
-    map_->InsertKeyFrame(current_frame_);
-    backend_->UpdateMap();
-
-    LOG(INFO) << "Initial map created with " << cnt_init_landmarks
-              << " map points";
-
-    return true;
+int Frontend::DetectJunctions() {
+    LOG(INFO) << "DetectJunctions not implemented";
 }
+
 
 bool Frontend::Reset() {
     LOG(INFO) << "Reset is not implemented. ";
@@ -376,4 +359,4 @@ bool Frontend::Reset() {
     return true;
 }
 
-}  // namespace myslam
+}  //namespace simple slam

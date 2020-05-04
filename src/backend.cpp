@@ -34,7 +34,6 @@ void Backend::BackendLoop() {
         std::unique_lock<std::mutex> lock(data_mutex_);
         map_update_.wait(lock);
 
-        /// 后端仅优化激活的Frames和Landmarks
         Map::KeyframesType active_kfs = map_->GetActiveKeyFrames();
         Map::LandmarksType active_landmarks = map_->GetActiveMapPoints();
         Optimize(active_kfs, active_landmarks);
@@ -42,17 +41,13 @@ void Backend::BackendLoop() {
 }
 
 //TODO： MergeJunction definition
-/*
-void Backend::MergeJunction()
+void Backend::MergeJunctions(Map::KeyframesType& keyframes, Map::JunctionsType& landmarks)
 {
-
-
+    LOG(INFO)<<"MergeJunctions not implemented";
 }
-*/
 
 void Backend::Optimize(Map::KeyframesType &keyframes,
                        Map::LandmarksType &landmarks) {
-    LOG(INFO) << "Backend optimization called";
     // setup g2o
     typedef g2o::BlockSolver_6_3 BlockSolverType;
     typedef g2o::LinearSolverCSparse<BlockSolverType::PoseMatrixType>
@@ -177,7 +172,6 @@ void Backend::Optimize(Map::KeyframesType &keyframes,
         landmarks.at(v.first)->SetPos(v.second->estimate());
     }
 
-    //TODO: Junction Merging function will be called here
 }
 
 }  // namespace myslam

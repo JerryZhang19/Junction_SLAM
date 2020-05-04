@@ -44,7 +44,7 @@ class Backend {
 
     /// Do optimization
     void Optimize(Map::KeyframesType& keyframes, Map::LandmarksType& landmarks);
-
+    void MergeJunctions(Map::KeyframesType& keyframes, Map::JunctionsType& landmarks);
     std::shared_ptr<Map> map_;
     std::thread backend_thread_;
     std::mutex data_mutex_;
