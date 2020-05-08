@@ -371,26 +371,37 @@ int Frontend::DetectJunctions() {
     image_msg.SerializeToString(&serialized_image);
 
     //   Send
-    // publisher.send(zmq::buffer(serialized_image), zmq::send_flags::dontwait);
-    // LOG(INFO) << "Sent image: " << serialized_image.length() << " bytes";
-
     publisher.send(zmq::buffer(serialized_image));
     LOG(INFO) << "Sent image: " << serialized_image.length() << " bytes";
 
     // Recv a junction list from LCNN
+
+    //   Recv
     zmq::message_t zmqmsg_junctions;
     subscriber.recv(&zmqmsg_junctions);
-
     LOG(INFO) << "Recieved junctions: " << zmqmsg_junctions.size() << " bytes";
 
+    //   Parse
     std::string serialized_junctions(static_cast<char*>(zmqmsg_junctions.data()), zmqmsg_junctions.size());
     LCNN::Junctions junctions_msg;
     junctions_msg.ParseFromString(serialized_junctions);
 
+    // Register detected junctions
+    std::vector<cv::KeyPoint> keypoints;
+    int cnt_detected = 0;
     for (int j = 0; j < junctions_msg.points_size(); j++) {
-        const LCNN::Point& point = junctions_msg.points(j);
+        const LCNN::Point &point = junctions_msg.points(j);
+        // std::cout << point.x() << point.y() << point.score() << std::endl;
 
-        std::cout << point.x() << point.y() << point.score() << std::endl;
+        cv::Point2d position = {point.x(), point.y()};
+        int depth = current_frame_->depth_.at<unsigned short>(position);
+
+        if (depth <= Frame::max_depth && depth >= Frame::min_depth) {
+            // TODO
+            // current_frame_->features_.push_back(
+            //     Feature::Ptr(new Feature(current_frame_, kp, double(depth) / 1000.0)));
+            cnt_detected++;
+        }
     }
 }
 
