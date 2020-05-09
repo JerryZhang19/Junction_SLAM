@@ -26,6 +26,9 @@ class Config {
     // access the parameter values
     template <typename T>
     static T Get(const std::string &key) {
+        cv::FileStorage fs("../config/default.yaml", cv::FileStorage::READ);
+        auto filenode=fs["camera.cy"];
+        std::cout<<"wtffffff???"<<std::endl;
         return T(Config::config_->file_[key]);
     }
 };

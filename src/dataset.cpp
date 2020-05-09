@@ -13,6 +13,8 @@ Dataset::Dataset(const std::string& dataset_path)
 
 bool Dataset::Init() {
     // read camera intrinsics and extrinsics
+
+
     ifstream fin(dataset_path_ + "/calib.txt");
     if (!fin) {
         LOG(ERROR) << "cannot find " << dataset_path_ << "/calib.txt!";
@@ -59,20 +61,12 @@ Frame::Ptr Dataset::NextFrame() {
         cv::imread((depth_fmt % dataset_path_  % current_image_index_).str(),
                    cv::IMREAD_UNCHANGED);
 
-    //std::cout<<"while reading, depth="<<depth.at<unsigned short>(cv::Point(100,100));
-    //cv::imshow("imput",img);
-    //cv::waitKey(0);
 
     if (img.data == nullptr || depth.data == nullptr) {
         LOG(WARNING) << "cannot find images at index " << current_image_index_;
         return nullptr;
     }
 
-    //cv::Mat image_left_resized, image_right_resized;
-    //cv::resize(image_left, image_left_resized, cv::Size(), 0.5, 0.5,
-    //           cv::INTER_NEAREST);
-    //cv::resize(image_right, image_right_resized, cv::Size(), 0.5, 0.5,
-    //           cv::INTER_NEAREST);
 
     auto new_frame = Frame::CreateFrame();
     new_frame->img_ = img;

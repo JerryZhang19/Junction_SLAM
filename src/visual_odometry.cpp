@@ -14,18 +14,26 @@ VisualOdometry::VisualOdometry(std::string &config_path)
 
 bool VisualOdometry::Init() {
     // read from config file
-    if (Config::SetParameterFile(config_file_path_) == false) {
+    std::cout<<"0"<<config_file_path_<<std::endl;
+    if (!Config::SetParameterFile(config_file_path_)) {
         return false;
     }
+    std::cout<<"1"<<std::endl;
+    //auto s = Config::
+    std::cout<<"fuckkkkkkk"<<std::endl;
 
     dataset_ =
         Dataset::Ptr(new Dataset(Config::Get<std::string>("dataset_dir")));
     CHECK_EQ(dataset_->Init(), true);
 
     // create components and links
+    std::cout<<"2"<<std::endl;
     frontend_ = Frontend::Ptr(new Frontend);
+    std::cout<<"3"<<std::endl;
     backend_ = Backend::Ptr(new Backend);
+    std::cout<<"4"<<std::endl;
     map_ = Map::Ptr(new Map);
+    std::cout<<"5"<<std::endl;
     viewer_ = Viewer::Ptr(new Viewer);
 
     frontend_->SetBackend(backend_);
