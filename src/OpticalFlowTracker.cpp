@@ -3,7 +3,7 @@
 //
 
 #include "myslam/OpticalFlowTracker.h"
-
+#include "myslam/feature.h"
 using namespace std;
 using namespace cv;
 
@@ -98,10 +98,10 @@ namespace simpleslam {
                 double ratio = lambda_max / lambda_min;
 
                 ostream_mux.lock();
-                cout << ratio << endl;
+                //cout << ratio << endl;
                 ostream_mux.unlock();
 
-                if (track_edge) {
+                if (is_edge&&(ratio>500||lambda_min==0)) {
                     int index = lambda1 > lambda2 ? 0 : 1;
                     Eigen::Vector2d v = es.eigenvectors().col(index).real();
                     update = (v.dot(b) / lambda_max) * v;
@@ -111,7 +111,6 @@ namespace simpleslam {
 
 
                 if (std::isnan(update[0])) {
-                    // sometimes occurred when we have a black or white patch and H is irreversible
                     cout << "update is nan" << endl;
                     succ = false;
                     break;
@@ -135,7 +134,6 @@ namespace simpleslam {
 
             success[i] = succ;
 
-            // set kp2
             kp2[i].pt = kp.pt + Point2f(dx, dy);
         }
     }
@@ -165,14 +163,20 @@ namespace simpleslam {
             bool inverse, bool is_edge) {
 
         // parameters
-        int pyramids = 1;
-        double pyramid_scale = 0.5;
-        double scales[] = {1.0};
-        if(!is_edge)
+        int pyramids;
+        double pyramid_scale;
+        vector<double> scales;
+
+        if(is_edge)
         {
+            pyramids = 1;
+            pyramid_scale = 0.5;
+            scales = {1.0}; // effective gradient scale for edge usually small
+        }
+        else{
             pyramids = 4;
-            double pyramid_scale = 0.5;
-            double scales[] = {1.0,0.5,0.25,0.125};
+            pyramid_scale = 0.5;
+            scales = {1.0,0.5,0.25,0.125};
         }
 
         // create pyramids
@@ -194,7 +198,7 @@ namespace simpleslam {
         }
         chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
         auto time_used = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
-        cout << "build pyramid time: " << time_used.count() << endl;
+        //cout << "build pyramid time: " << time_used.count() << endl;
 
         // coarse-to-fine LK tracking in pyramids
         vector<KeyPoint> kp1_pyr, kp2_pyr;
@@ -212,7 +216,7 @@ namespace simpleslam {
             OpticalFlowSingleLevel(pyr1[level], pyr2[level], kp1_pyr, kp2_pyr, success, inverse, true, is_edge);
             t2 = chrono::steady_clock::now();
             auto time_used = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
-            cout << "track pyr " << level << " cost time: " << time_used.count() << endl;
+            //cout << "track pyr " << level << " cost time: " << time_used.count() << endl;
 
             if (level > 0) {
                 for (auto &kp: kp1_pyr)
@@ -222,20 +226,115 @@ namespace simpleslam {
             }
         }
 
-        for (auto &kp: kp2_pyr)
+        for(int i=0;i<kp2_pyr.size();i++)
+        {
+            auto kp = kp2_pyr[i];
+            if(kp.pt.x>img2.cols)
+                success[i]=false;
+            if(kp.pt.y>img2.rows)
+                success[i]=false;
             kp2.push_back(kp);
+        }
+
     }
 
     void TrackEdge(
             const Mat &img1,
             const Mat &img2,
-
-            vector<KeyPoint> &kp2,
-            vector<bool> &success
+            const Vec2& position,
+            const Vec2& endpoint,
+            vector<Vec2> &kps
     )
     {
-        ;
+        vector<KeyPoint> kp1;
+        vector<KeyPoint> kp2;
+        vector<bool> succ;
+        for(int i=1;i<10;i++)
+        {
+            float x = position[0]/10*(10-i)+endpoint[0]/10*i;
+            float y = position[1]/10*(10-i)+endpoint[1]/10*i;
+            kp1.push_back(KeyPoint(x,y,0));
+        }
+        OpticalFlowMultiLevel(img1, img2, kp1, kp2, succ, false,true);
+        for (int i=0;i<kp2.size();i++)
+        {
+            if(succ[i])
+                kps.push_back({kp2[i].pt.x,kp2[i].pt.y});
+        }
+    }
+
+    bool BoundaryCheck(const Mat& img, Vec2 pos)
+    {
+        if(pos[0]>=0&&pos[0]<img.cols&&pos[1]>=0&&pos[1]<img.rows)
+            return true;
+        return false;
+    }
 
 
+
+    void TrackCenter(
+            const Mat &img1,
+            const Mat &img2,
+            const Vec2& position,
+            KeyPoint &kp,
+            bool &succ
+    )
+    {
+        vector<KeyPoint> kps;
+        vector<bool> success;
+        OpticalFlowMultiLevel(img1, img2, {KeyPoint(position[0],position[1],0)}, kps, success, false,false);
+        succ = success[0];
+        kp = kps[0];
+    }
+
+    std::shared_ptr<Junction2D> TrackJunction(
+            const Mat &img1,
+            const Mat &img2,
+            std::shared_ptr<Junction2D> junction1
+            )
+    {
+        Vec2 center = junction1->position_;
+        KeyPoint center_kp;
+        bool succ_center;
+        TrackCenter(img1,img2,center,center_kp,succ_center);
+        Vec2 center_tracked{center_kp.pt.x,center_kp.pt.y};
+        if(!succ_center)
+            return NULL;
+        auto junction2 = std::make_shared<Junction2D>();
+        junction2->position_ = center_tracked;
+        for (Vec2 endpoint: junction1->endpoints_)
+        {
+            vector<Vec2> tracked_middle_points;
+            TrackEdge(img1,img2,center,endpoint,tracked_middle_points);
+            int num_tracked = tracked_middle_points.size();
+            Eigen::MatrixXd M;
+            M.resize(2,num_tracked);
+            for(int i=0;i<tracked_middle_points.size();i++)
+                M.col(i) = tracked_middle_points[i] - center_tracked;
+            //Do PCA
+            Eigen::Matrix2d H  = M*M.transpose();
+            Eigen::EigenSolver<Eigen::Matrix2d> es(H);
+            auto eigenvalues = es.eigenvalues();
+            double lambda1 = eigenvalues[0].real();
+            double lambda2 = eigenvalues[1].real();
+            int index = lambda1>lambda2? 0:1;
+            Vec2 v = es.eigenvectors().col(index).real();
+            //Vec2 displacement = v*v.dot(*(tracked_middle_points.end()-1)-center_tracked);
+            Vec2 displacement = v*(endpoint-center).norm();
+            LOG(INFO)<<"Quality Ratio:"<<(index?(lambda2/lambda1):(lambda1/lambda2));
+            int iters = 0;
+            while(!BoundaryCheck(img2,center_tracked+displacement))
+            {
+                displacement*=0.95;
+                iters++;
+                if(iters>=100)
+                    break;
+            }
+            if(displacement.norm()<15||iters>=100)  //edge too short or out of bound
+                continue;
+            junction2->endpoints_.emplace_back(center_tracked+displacement);
+        }
+        LOG(INFO)<<"track junction done!";
+        return junction2;
     }
 }

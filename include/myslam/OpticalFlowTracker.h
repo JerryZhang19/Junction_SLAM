@@ -21,9 +21,9 @@ namespace simpleslam {
                 const std::vector<cv::KeyPoint> &kp1_,
                 std::vector<cv::KeyPoint> &kp2_,
                 std::vector<bool> &success_,
-                bool inverse_ = true, bool has_initial_ = false, bool track_edge_ = true) :
+                bool inverse_ = true, bool has_initial_ = false, bool is_edge_ = false) :
                 img1(img1_), img2(img2_), kp1(kp1_), kp2(kp2_), success(success_), inverse(inverse_),
-                has_initial(has_initial_), track_edge(track_edge_) {}
+                has_initial(has_initial_), is_edge(is_edge_) {}
 
         void calculateOpticalFlow(const cv::Range &range);
 
@@ -35,7 +35,7 @@ namespace simpleslam {
         std::vector<bool> &success;
         bool inverse = true;
         bool has_initial = false;
-        bool track_edge = false;
+        bool is_edge = false;
 
         std::mutex ostream_mux;
         std::mutex mux1;
@@ -59,6 +59,12 @@ namespace simpleslam {
             std::vector<bool> &success,
             bool inverse = false,
             bool is_edge = false
+    );
+
+    std::shared_ptr<Junction2D> TrackJunction(
+            const Mat &img1,
+            const Mat &img2,
+            std::shared_ptr<Junction2D> junction1
     );
 
 }

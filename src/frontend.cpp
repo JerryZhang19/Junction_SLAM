@@ -12,6 +12,7 @@
 #include "myslam/g2o_types.h"
 #include "myslam/map.h"
 #include "myslam/viewer.h"
+#include "myslam/OpticalFlowTracker.h"
 
 namespace simpleslam {
 
@@ -74,6 +75,8 @@ bool Frontend::Track() {
     relative_motion_ = current_frame_->Pose() * last_frame_->Pose().inverse();
 
     if (viewer_) viewer_->AddCurrentFrame(current_frame_);
+
+    sleep(0.1);
     return true;
 }
 
@@ -278,13 +281,18 @@ int Frontend::TrackFeaturePoints() {
 }
 
 int Frontend::TrackJunctions(){
-    std::vector<cv::Point2f> jcs_last, jcs_current;
-    for (auto &junct : last_frame_->junctions_) {
-        //do something
-    }
-    //do something
-    LOG(INFO) << "TrackJunctions not implemented";
-    return 0;
+    //TODO: Better parallelism (Future)
+    LOG(INFO)<<"DEBUG info trackjunctions starts";
+    for (const auto &junct : last_frame_->junctions_) {
+        auto new_junction = TrackJunction(
+                last_frame_->img_,
+                current_frame_->img_,
+                junct);
+        new_junction->frame_ = current_frame_;
+        current_frame_->junctions_.push_back(new_junction);
+        }
+    LOG(INFO)<<current_frame_->junctions_.size()<<"Junctions remains";
+    return current_frame_->junctions_.size();
 }
 
 
@@ -351,7 +359,13 @@ int Frontend::DetectFeatures() {
 }
 
 int Frontend::DetectJunctions() {
-    LOG(INFO) << "DetectJunctions not implemented";
+    LOG(INFO)<<"debug info in DetectJunctions00000";
+    Vec2 pos;
+    Vec2 end;
+    pos<<502.4638366699219,129.3442726135254;
+    end<<582.5357055664062,125.1291275024414;
+    current_frame_->junctions_.push_back(Junction2D::Ptr(new Junction2D(current_frame_,pos,{end})));
+    LOG(INFO)<<"debug info in DetectJunctions11111";
 }
 
 

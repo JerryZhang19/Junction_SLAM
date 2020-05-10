@@ -64,6 +64,7 @@ void Viewer::ThreadLoop() {
             cv::Mat img = PlotFrameImage();
             cv::imshow("image", img);
             cv::waitKey(1);
+            cv::imwrite("../data/visualization/1.png",img);
         }
 
         if (map_) {
@@ -86,6 +87,12 @@ cv::Mat Viewer::PlotFrameImage() {
             cv::circle(img_out, feat->position_.pt, 2, cv::Scalar(0, 250, 0),
                        2);
         }
+    }
+    for (const auto& junct:current_frame_->junctions_)
+    {
+        Vec2 center = junct->position_;
+        for(auto endpoint:junct->endpoints_)
+            cv::line(img_out,{int(center[0]),int(center[1])},{int(endpoint[0]),int(endpoint[1])},cv::Scalar(0, 250, 0),2);
     }
     return img_out;
 }
