@@ -52,8 +52,8 @@ message( ${CSPARSE_INCLUDE_DIR} )
 
 
 # cppzmq
-find_package(cppzmq)
-include_directories(${cppzmq_INCLUDE_DIR})
+#find_package(cppzmq)
+#include_directories(${cppzmq_INCLUDE_DIR})
 
 # protobuf
 find_package(Protobuf REQUIRED)
@@ -78,7 +78,7 @@ set(THIRD_PARTY_LIBS
         ${CSPARSE_LIBRARY}
         proto
         ${Protobuf_LIBRARIES}
-        cppzmq
+        #cppzmq
         )
 
 enable_testing()
