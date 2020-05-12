@@ -17,7 +17,7 @@
 
 namespace simpleslam {
 
-inline Vec2 toVec2(const cv::Point2f p) { return Vec2(p.x, p.y); } //simple helper function
+//inline Vec2 toVec2(const cv::Point2f p) { return Vec2(p.x, p.y); } //simple helper function
 
 Frontend::Frontend() {
     gftt_ =
@@ -133,8 +133,8 @@ int Frontend::InitializeNewPoints()  {
     for (size_t i = 0; i < current_frame_->features_.size(); ++i) {
         if (current_frame_->features_[i]->map_point_.expired()) {
             Vec3 pworld = camera_->pixel2world(current_frame_->features_[i]->get_vec2(),
-                                               camera_->pose_,// Identity SE3
-                                               current_frame_->features_[i]->init_depth_); // use depth sensor only to init
+                                               camera_->pose_,
+                                               current_frame_->features_[i]->init_depth_);
 
             auto new_map_point = MapPoint::CreateNewMappoint();
             pworld = current_pose_Twc * pworld;
@@ -156,23 +156,41 @@ int Frontend::InitializeNewJunctions()  {
         if (current_frame_->junctions_[i]->junction3D_.expired()) {
             // if expired register new junction3D
 
-            const Vec2 position = current_frame_->junctions_[i]->get_vec2();
-            int depth_in_pixelvalue = current_frame_->depth_.at<unsigned short>(cv::Point2d(position.x(), position.y()));
-            double depth_in_meter = 0.001 * depth_in_pixelvalue;
+            const Vec2 position = current_frame_->junctions_[i]->position_;
+            double depth_center = 0.001*current_frame_->depth_.at<unsigned short>(cv::Point2d(position.x(), position.y()));
+            if(depth_center==0)
+                continue;
+
             Vec3 pworld = camera_->pixel2world(position,
-                                               camera_->pose_,//? why is it Identity SE3
-                                               depth_in_meter); // use depth sensor only to init
+                                               camera_->pose_,// Identity SE3, camera extrinsics
+                                               depth_center);
 
             auto new_junction3D = Junction3D::CreateNewJunction3D();
             pworld = current_pose_Twc * pworld;
             new_junction3D->SetPos(pworld);
             // new_junction3D->AddObservation(current_frame_->junctions_[i]);
+            std::vector<Vec3> endpoints3D;
+            for(const auto &endpoint2D : current_frame_->junctions_[i]->endpoints_)
+            {
+                double depth_endpoint = 0.001*current_frame_->depth_.at<unsigned short>(cv::Point2d(endpoint2D.x(), endpoint2D.y()));
+                if(depth_endpoint==0) //if depth is missing, other technique can be used, temporarily ignore this edge
+                    continue;
+                Vec3 endpoint3D = camera_->pixel2world(endpoint2D,
+                                                   camera_->pose_,
+                                                       depth_endpoint);
+                endpoint3D = current_pose_Twc * endpoint3D;
+                endpoints3D.push_back(endpoint3D);
+            }
+            new_junction3D->SetEndpoints(endpoints3D);
+            if(endpoints3D.size()<=1) //ignore line and single point
+                continue;
             current_frame_->junctions_[i]->junction3D_ = new_junction3D;
             map_->InsertMapJunction(new_junction3D);
             cnt_junctions++;
         }
     }
     LOG(INFO) << "new landmarks (junctions): " << cnt_junctions;
+    sleep(5);
     return cnt_junctions;
 }
 
@@ -419,7 +437,7 @@ int Frontend::DetectJunctions() {
         // depth1 <= Frame::max_depth && depth1 >= Frame::min_depth
         //     && depth2 <= Frame::max_depth && depth2 >= Frame::min_depth
 
-        edges.push_back(std::pair<Vec2,Vec2>{{line.point1.x(), line.point1.y()}, {line.point2.x(), line.point2.y()}});
+        edges.push_back(std::pair<Vec2,Vec2>{{line.point1().x(), line.point1().y()}, {line.point2().x(), line.point2().y()}});
     }
 
     std::vector<std::shared_ptr<Junction2D>> junctions = EdgeToJunction(edges);
