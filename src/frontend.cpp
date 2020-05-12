@@ -402,14 +402,10 @@ int Frontend::DetectJunctions() {
         // std::cout << point.x() << point.y() << point.score() << std::endl;
 
         cv::Point2d position = {point.x(), point.y()};
+
         int depth = current_frame_->depth_.at<unsigned short>(position);
 
-        if (depth <= Frame::max_depth && depth >= Frame::min_depth) {
-            // TODO
-            // current_frame_->features_.push_back(
-            //     Feature::Ptr(new Feature(current_frame_, kp, double(depth) / 1000.0)));
-            cnt_detected++;
-        }
+        cnt_detected++;
     }
 }
 
