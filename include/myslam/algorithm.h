@@ -40,6 +40,7 @@ namespace simpleslam {
         {
             Junctions.push_back(Junction2D::Ptr (new Junction2D(NULL,vertex.first,vertex.second)));
         }
+        
     }
 
     // converters
