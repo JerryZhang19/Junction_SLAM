@@ -3,17 +3,17 @@ syntax = "proto3";
 package LCNN;
 
 message Junctions {
-  repeated Point points = 1;
+  repeated Line lines = 1;
 }
 
-/* message Line { */
-/*     Point point1 = 1; */
-/*     Point point2 = 2; */
-/*     float score = 3; */
-/* } */
+message Line {
+    Point point1 = 1;
+    Point point2 = 2;
+    float score = 3;
+}
 
 message Point {
   float x = 1;
   float y = 2;
-  float score = 3;
+  /* float score = 3; */
 }

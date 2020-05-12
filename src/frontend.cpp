@@ -152,8 +152,27 @@ int Frontend::InitializeNewPoints()  {
 int Frontend::InitializeNewJunctions()  {
     SE3 current_pose_Twc = current_frame_->Pose().inverse();
     int cnt_junctions = 0;
-    //do something
-    LOG(INFO) << "InitializeNewJunctions not implemented " ;
+    for (size_t i = 0; i < current_frame_->junctions_.size(); ++i) {
+        if (current_frame_->junctions_[i]->junction3D_.expired()) {
+            // if expired register new junction3D
+
+            const Vec2 position = current_frame_->junctions_[i]->get_vec2();
+            int depth_in_pixelvalue = current_frame_->depth_.at<unsigned short>(cv::Point2d(position.x(), position.y()));
+            double depth_in_meter = 0.001 * depth_in_pixelvalue;
+            Vec3 pworld = camera_->pixel2world(position,
+                                               camera_->pose_,//? why is it Identity SE3
+                                               depth_in_meter); // use depth sensor only to init
+
+            auto new_junction3D = Junction3D::CreateNewJunction3D();
+            pworld = current_pose_Twc * pworld;
+            new_junction3D->SetPos(pworld);
+            // new_junction3D->AddObservation(current_frame_->junctions_[i]);
+            current_frame_->junctions_[i]->junction3D_ = new_junction3D;
+            map_->InsertMapJunction(new_junction3D);
+            cnt_junctions++;
+        }
+    }
+    LOG(INFO) << "new landmarks (junctions): " << cnt_junctions;
     return cnt_junctions;
 }
 
@@ -389,20 +408,27 @@ int Frontend::DetectJunctions() {
     // Register detected junctions
     std::vector<cv::KeyPoint> keypoints;
     int cnt_detected = 0;
-    for (int j = 0; j < junctions_msg.points_size(); j++) {
-        const LCNN::Point &point = junctions_msg.points(j);
-        // std::cout << point.x() << point.y() << point.score() << std::endl;
 
-        cv::Point2d position = {point.x(), point.y()};
-        int depth = current_frame_->depth_.at<unsigned short>(position);
+    std::vector<std::pair<Vec2,Vec2>> edges;
+    for (int j = 0; j < junctions_msg.lines_size(); j++) {
+        const LCNN::Line &line = junctions_msg.lines(j);
 
-        if (depth <= Frame::max_depth && depth >= Frame::min_depth) {
-            // TODO
-            // current_frame_->features_.push_back(
-            //     Feature::Ptr(new Feature(current_frame_, kp, double(depth) / 1000.0)));
-            cnt_detected++;
-        }
+        // TODO depth check
+        // int depth1 = current_frame_->depth_.at<unsigned short>(position1);
+        // int depth2 = current_frame_->depth_.at<unsigned short>(position2);
+        // depth1 <= Frame::max_depth && depth1 >= Frame::min_depth
+        //     && depth2 <= Frame::max_depth && depth2 >= Frame::min_depth
+
+        edges.push_back(std::pair<Vec2,Vec2>{{line.point1.x(), line.point1.y()}, {line.point2.x(), line.point2.y()}});
     }
+
+    std::vector<std::shared_ptr<Junction2D>> junctions = EdgeToJunction(edges);
+
+    for (const auto &junction: junctions) {
+        current_frame_->junctions_.push_back(junction);
+        cnt_detected++;
+    }
+
 }
 
 

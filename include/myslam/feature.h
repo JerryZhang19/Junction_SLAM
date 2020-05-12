@@ -38,7 +38,7 @@ struct Feature {
         : frame_(frame), position_(kp) {}
     Feature(std::shared_ptr<Frame> frame, const cv::KeyPoint &kp, double init_depth)
             : frame_(frame), position_(kp), init_depth_(init_depth){}
-    Vec2 get_vec2(){return Vec2(position_.pt.x,position_.pt.y);}    
+    Vec2 get_vec2(){return Vec2(position_.pt.x,position_.pt.y);}
 };
 
 /**
@@ -61,6 +61,8 @@ public:
 
     Junction2D(std::shared_ptr<Frame> frame, const Vec2 &position, const std::vector<Vec2>& endpoints)
     : frame_(frame), position_(position), endpoints_(endpoints)  {}
+
+    Vec2 get_vec2(){return position_;}
 };
 
 };
