@@ -64,7 +64,6 @@ void Viewer::ThreadLoop() {
             cv::Mat img = PlotFrameImage();
             cv::imshow("image", img);
             cv::waitKey(1);
-            cv::imwrite("../data/visualization/1.png",img);
         }
 
         if (map_) {
