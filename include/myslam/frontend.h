@@ -4,7 +4,8 @@
 
 #include <opencv2/features2d.hpp>
 
-#include <build/msg.pb.h>
+#include <build/junction.pb.h>
+#include <build/image.pb.h>
 #include <zmq.hpp>
 
 #include "myslam/common_include.h"
@@ -148,6 +149,7 @@ class Frontend {
     // zmq
     zmq::context_t context;
     zmq::socket_t publisher;
+    zmq::socket_t subscriber;
 
 };
 

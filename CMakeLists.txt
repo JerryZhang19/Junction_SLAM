@@ -61,7 +61,7 @@ include_directories(${Protobuf_INCLUDE_DIR})
 include_directories("${PROJECT_SOURCE_DIR}")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-PROTOBUF_GENERATE_CPP(PROTO_SRC PROTO_HEADER proto/msg.proto)
+PROTOBUF_GENERATE_CPP(PROTO_SRC PROTO_HEADER proto/image.proto proto/junction.proto)
 ADD_LIBRARY(proto ${PROTO_HEADER} ${PROTO_SRC})
 
 

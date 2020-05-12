@@ -3,6 +3,8 @@
 //
 
 #include <opencv2/opencv.hpp>
+#include <chrono>
+#include <thread>
 
 #include "myslam/algorithm.h"
 #include "myslam/backend.h"
@@ -18,16 +20,26 @@ namespace simpleslam {
 
 inline Vec2 toVec2(const cv::Point2f p) { return Vec2(p.x, p.y); } //simple helper function
 
-Frontend::Frontend():
-    context(1),
-    publisher(context, ZMQ_PUB)
- {
+Frontend::Frontend() {
     gftt_ =
         cv::GFTTDetector::create(Config::Get<int>("num_features"), 0.01, 20);
     num_features_init_ = Config::Get<int>("num_features_init");
     num_features_ = Config::Get<int>("num_features");
 
-    publisher.bind("tcp://127.0.0.1:5557");
+    //! zmq sockets should be initialized here.
+    //! won't work if initialized in :
+    context = zmq::context_t(1);
+
+    publisher = zmq::socket_t(context, ZMQ_PUB);
+    publisher.bind("tcp://127.0.0.1:5556"); // Image
+    // https://stackoverflow.com/questions/7470472/lost-messages-on-zeromq-pub-sub
+    // TODO explicit synchronization required
+    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+
+    subscriber = zmq::socket_t(context, ZMQ_SUB);
+    subscriber.connect("tcp://127.0.0.1:5557");  // Junction
+    //  Subscribe to every single topic from publisher
+    subscriber.setsockopt(ZMQ_SUBSCRIBE, NULL, 0);
 }
 
 bool Frontend::AddFrame(simpleslam::Frame::Ptr frame) {
@@ -343,29 +355,62 @@ int Frontend::DetectFeatures() {
 
     LOG(INFO) << "Detect " << cnt_detected << " new features";
 
-    std::string encoded_msg;
-    RL::DataSet msg;
-    msg.set_count(cnt_detected);
-    msg.add_joint_position(1.1);
-    msg.add_joint_position(2.1);
-    msg.add_joint_velocity(-1.1);
-    msg.add_joint_velocity(-2.1);
-
-    msg.SerializeToString(&encoded_msg);
-
-    publisher.send(zmq::buffer(encoded_msg), zmq::send_flags::dontwait);
-
     return cnt_detected;
 }
 
 int Frontend::DetectJunctions() {
-    LOG(INFO)<<"debug info in DetectJunctions00000";
-    Vec2 pos;
-    Vec2 end;
-    pos<<502.4638366699219,129.3442726135254;
-    end<<582.5357055664062,125.1291275024414;
-    current_frame_->junctions_.push_back(Junction2D::Ptr(new Junction2D(current_frame_,pos,{end})));
-    LOG(INFO)<<"debug info in DetectJunctions11111";
+    // http://yoshidabenjiro.hatenablog.com/entry/2018/11/26/224825
+    // https://stackoverflow.com/questions/51553943/how-can-i-serialize-cvmat-objects-using-protobuf
+
+    // Send an image to LCNN
+
+    //   Serialization
+    const cv::Mat m = current_frame_->img_;
+    const size_t dataSize = m.rows * m.cols * m.elemSize();
+
+    LCNN::Image image_msg;
+    image_msg.set_rows(m.rows);
+    image_msg.set_cols(m.cols);
+    image_msg.set_elt_type(m.type());
+    image_msg.set_elt_size((int)m.elemSize());
+    image_msg.set_mat_data(m.data, dataSize);
+
+    std::string serialized_image;
+    image_msg.SerializeToString(&serialized_image);
+
+    //   Send
+    publisher.send(zmq::buffer(serialized_image));
+    LOG(INFO) << "Sent image: " << serialized_image.length() << " bytes";
+
+    // Recv a junction list from LCNN
+
+    //   Recv
+    zmq::message_t zmqmsg_junctions;
+    subscriber.recv(&zmqmsg_junctions);
+    LOG(INFO) << "Recieved junctions: " << zmqmsg_junctions.size() << " bytes";
+
+    //   Parse
+    std::string serialized_junctions(static_cast<char*>(zmqmsg_junctions.data()), zmqmsg_junctions.size());
+    LCNN::Junctions junctions_msg;
+    junctions_msg.ParseFromString(serialized_junctions);
+
+    // Register detected junctions
+    std::vector<cv::KeyPoint> keypoints;
+    int cnt_detected = 0;
+    for (int j = 0; j < junctions_msg.points_size(); j++) {
+        const LCNN::Point &point = junctions_msg.points(j);
+        // std::cout << point.x() << point.y() << point.score() << std::endl;
+
+        cv::Point2d position = {point.x(), point.y()};
+        int depth = current_frame_->depth_.at<unsigned short>(position);
+
+        if (depth <= Frame::max_depth && depth >= Frame::min_depth) {
+            // TODO
+            // current_frame_->features_.push_back(
+            //     Feature::Ptr(new Feature(current_frame_, kp, double(depth) / 1000.0)));
+            cnt_detected++;
+        }
+    }
 }
 
 
