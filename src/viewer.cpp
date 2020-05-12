@@ -80,13 +80,19 @@ void Viewer::ThreadLoop() {
 
 cv::Mat Viewer::PlotFrameImage() {
     cv::Mat img_out;
-    cv::cvtColor(current_frame_->img_, img_out, CV_GRAY2BGR);
+    cv::cvtColor(current_frame_->img_, img_out, cv::COLOR_GRAY2BGR);
     for (size_t i = 0; i < current_frame_->features_.size(); ++i) {
         if (current_frame_->features_[i]->map_point_.lock()) {
             auto feat = current_frame_->features_[i];
             cv::circle(img_out, feat->position_.pt, 2, cv::Scalar(0, 250, 0),
                        2);
         }
+    }
+    for (const auto& junct:current_frame_->junctions_)
+    {
+        Vec2 center = junct->position_;
+        for(auto endpoint:junct->endpoints_)
+            cv::line(img_out,{int(center[0]),int(center[1])},{int(endpoint[0]),int(endpoint[1])},cv::Scalar(0, 250, 0),2);
     }
     return img_out;
 }
