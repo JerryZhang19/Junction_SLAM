@@ -28,7 +28,8 @@ void Viewer::UpdateMap() {
     std::unique_lock<std::mutex> lck(viewer_data_mutex_);
     assert(map_ != nullptr);
     active_keyframes_ = map_->GetActiveKeyFrames();
-    active_landmarks_ = map_->GetActiveMapPoints();
+    active_points_ = map_->GetActiveMapPoints();
+    all_junctions_ = map_->GetAllJunctions();
     map_updated_ = true;
 }
 
@@ -91,7 +92,7 @@ cv::Mat Viewer::PlotFrameImage() {
     {
         Vec2 center = junct->position_;
         for(auto endpoint:junct->endpoints_)
-            cv::line(img_out,{int(center[0]),int(center[1])},{int(endpoint[0]),int(endpoint[1])},cv::Scalar(0, 250, 0),2);
+            cv::line(img_out,{int(center[0]),int(center[1])},{int(0.4*center[0]+0.6*endpoint[0]),int(0.4*center[1]+0.6*endpoint[1])},cv::Scalar(250, 0, 0),2);
     }
     return img_out;
 }
@@ -151,17 +152,17 @@ void Viewer::DrawFrame(Frame::Ptr frame, const float* color) {
 }
 
 void Viewer::DrawJunction() {
-    const float red[3] = {1.0, 0, 0};
-    for (auto& kf : active_keyframes_) {
-        DrawFrame(kf.second, red);
-    }
 
-    glPointSize(2);
-    glBegin(GL_POINTS);
-    for (auto& landmark : active_landmarks_) {
-        auto pos = landmark.second->Pos();
-        glColor3f(red[0], red[1], red[2]);
-        glVertex3d(pos[0], pos[1], pos[2]);
+    glLineWidth(2);
+    glBegin(GL_LINES);
+    glColor3f(0,0,1.0);
+    for (auto& junct3 : all_junctions_) {
+        auto pos = junct3.second->pos_;
+        for(const auto& endpoint:junct3.second->endpoints_)
+        {
+            glVertex3f(pos[0], pos[1], pos[2]);
+            glVertex3f(endpoint[0],endpoint[1],endpoint[2]);
+        }
     }
     glEnd();
 }
@@ -175,13 +176,18 @@ void Viewer::DrawMapPoints() {
 
     glPointSize(2);
     glBegin(GL_POINTS);
-    for (auto& landmark : active_landmarks_) {
+    for (auto& landmark : active_points_) {
         auto pos = landmark.second->Pos();
         glColor3f(red[0], red[1], red[2]);
         glVertex3d(pos[0], pos[1], pos[2]);
     }
     glEnd();
+
+    DrawJunction();
 }
+
+
+
 
 
 

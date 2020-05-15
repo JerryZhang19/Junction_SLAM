@@ -5,6 +5,7 @@
 #ifndef SIMPLESLAM_OPTICALFLOWTRACKER_H
 #define SIMPLESLAM_OPTICALFLOWTRACKER_H
 #include "myslam/common_include.h"
+#include "myslam/algorithm.h"
 #include <mutex>
 
 
@@ -64,6 +65,8 @@ namespace simpleslam {
     std::shared_ptr<Junction2D> TrackJunction(
             const Mat &img1,
             const Mat &img2,
+            std::shared_ptr<Camera> camera,
+            std::shared_ptr<Frame>  frame,
             std::shared_ptr<Junction2D> junction1
     );
 

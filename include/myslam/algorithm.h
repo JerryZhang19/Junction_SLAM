@@ -1,7 +1,7 @@
 //
-// Created by gaoxiang on 19-5-4.
+// Created by Jianwei Zhang
 //
-
+#pragma once
 #ifndef MYSLAM_ALGORITHM_H
 #define MYSLAM_ALGORITHM_H
 
@@ -10,6 +10,8 @@
 #include "myslam/feature.h"
 #include  <map>
 #include <vector>
+#include "myslam/frame.h"
+#include "myslam/camera.h"
 
 
 namespace simpleslam {
@@ -21,30 +23,10 @@ namespace simpleslam {
         }
     };
 
-    std::vector<std::shared_ptr<Junction2D>> EdgeToJunction(std::vector<std::pair<Vec2,Vec2>> edges)
-    {
-        std::map<Vec2,std::vector<Vec2>,Vec2cmp> vertexes;
-        for (const auto &edge: edges)
-        {
-            if(vertexes.find(edge.first)==vertexes.end())
-                vertexes[edge.first] = {edge.second};
-            else
-                vertexes[edge.first].push_back(edge.second);
-            if(vertexes.find(edge.second)==vertexes.end())
-                vertexes[edge.second] = {edge.first};
-            else
-                vertexes[edge.second].push_back(edge.first);
-        }
-        std::vector<std::shared_ptr<Junction2D>> Junctions;
-        for(const auto& vertex:vertexes)
-        {
-            Junctions.push_back(Junction2D::Ptr (new Junction2D(NULL,vertex.first,vertex.second)));
-        }
-        
-    }
-
+    std::vector<std::shared_ptr<Junction2D>> EdgeToJunction(std::vector<std::pair<Vec2,Vec2>> edges);
     // converters
     inline Vec2 toVec2(const cv::Point2f p) { return Vec2(p.x, p.y); }
+    Vec3 GetOrientation(std::shared_ptr<Frame> frame, Vec2 center, Vec2 endpoint, std::shared_ptr<Camera> camera);
 
 }  // namespace myslam
 

@@ -10,7 +10,8 @@ add_library(simpleslam SHARED
         viewer.cpp
         visual_odometry.cpp
         dataset.cpp
-        OpticalFlowTracker.cpp)
+        OpticalFlowTracker.cpp
+        algorithm.cpp)
 
 target_link_libraries(simpleslam
         ${THIRD_PARTY_LIBS})

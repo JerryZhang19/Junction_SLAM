@@ -11,6 +11,7 @@
 #include "myslam/common_include.h"
 #include "myslam/frame.h"
 #include "myslam/map.h"
+#include "myslam/map_element.h"
 
 namespace simpleslam {
 
@@ -38,11 +39,9 @@ class Viewer {
     void ThreadLoop();
 
     void DrawFrame(Frame::Ptr frame, const float* color);
-
-
-
-    void DrawMapPoints();
     void DrawJunction();
+    void DrawMapPoints();
+
 
     void FollowCurrentFrame(pangolin::OpenGlRenderState& vis_camera);
 
@@ -56,7 +55,8 @@ class Viewer {
     bool viewer_running_ = true;
 
     std::unordered_map<unsigned long, Frame::Ptr> active_keyframes_;
-    std::unordered_map<unsigned long, MapPoint::Ptr> active_landmarks_;
+    std::unordered_map<unsigned long, MapPoint::Ptr> active_points_;
+    std::unordered_map<unsigned long, Junction3D::Ptr> all_junctions_;
     bool map_updated_ = false;
 
     std::mutex viewer_data_mutex_;

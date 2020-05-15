@@ -95,7 +95,12 @@ namespace simpleslam {
                 double lambda2 = eigenvalues[1].real();
                 double lambda_max = lambda1 > lambda2 ? lambda1 : lambda2;
                 double lambda_min = lambda1 < lambda2 ? lambda1 : lambda2;
-                double ratio = lambda_max / lambda_min;
+                if(lambda_max==0)
+                {
+                    succ = false;
+                    break;
+                }
+                double ratio = lambda_min!=0? (lambda_max / lambda_min):1000000000000000.0;
 
                 ostream_mux.lock();
                 //cout << ratio << endl;
@@ -110,7 +115,7 @@ namespace simpleslam {
                 }
 
 
-                if (std::isnan(update[0])) {
+                if (std::isnan(update[0])||std::isnan(update[1])) {
                     cout << "update is nan" << endl;
                     succ = false;
                     break;
@@ -169,9 +174,9 @@ namespace simpleslam {
 
         if(is_edge)
         {
-            pyramids = 1;
+            pyramids = 3;
             pyramid_scale = 0.5;
-            scales = {1.0}; // effective gradient scale for edge usually small
+            scales = {1.0,0.5,0.25}; // effective gradient scale for edge usually small
         }
         else{
             pyramids = 4;
@@ -290,6 +295,8 @@ namespace simpleslam {
     std::shared_ptr<Junction2D> TrackJunction(
             const Mat &img1,
             const Mat &img2,
+            std::shared_ptr<Camera> camera,
+            std::shared_ptr<Frame>  frame,
             std::shared_ptr<Junction2D> junction1
             )
     {
@@ -298,8 +305,9 @@ namespace simpleslam {
         bool succ_center;
         TrackCenter(img1,img2,center,center_kp,succ_center);
         Vec2 center_tracked{center_kp.pt.x,center_kp.pt.y};
-        if(!succ_center)
+        if(!succ_center) {
             return NULL;
+        }
         auto junction2 = std::make_shared<Junction2D>();
         junction2->position_ = center_tracked;
         for (Vec2 endpoint: junction1->endpoints_)
@@ -319,9 +327,15 @@ namespace simpleslam {
             double lambda2 = eigenvalues[1].real();
             int index = lambda1>lambda2? 0:1;
             Vec2 v = es.eigenvectors().col(index).real();
-            //Vec2 displacement = v*v.dot(*(tracked_middle_points.end()-1)-center_tracked);
-            Vec2 displacement = v*(endpoint-center).norm();
-            LOG(INFO)<<"Quality Ratio:"<<(index?(lambda2/lambda1):(lambda1/lambda2));
+            Vec2 displacement;
+            {
+                displacement= v * (endpoint - center).norm();
+                if(v.dot(*(tracked_middle_points.end()-1)-center_tracked)<0)
+                    displacement = -displacement;
+            }
+
+
+            //LOG(INFO)<<"Quality Ratio:"<<(index?(lambda2/lambda1):(lambda1/lambda2));
             int iters = 0;
             while(!BoundaryCheck(img2,center_tracked+displacement))
             {
@@ -332,9 +346,12 @@ namespace simpleslam {
             }
             if(displacement.norm()<15||iters>=100)  //edge too short or out of bound
                 continue;
+            //if(GetOrientation(frame,center_tracked,center_tracked+displacement,camera)==Vec3(0,0,0))
+            //    continue;
             junction2->endpoints_.emplace_back(center_tracked+displacement);
         }
-        LOG(INFO)<<"track junction done!";
+        if(junction2->endpoints_.size()==0)
+            return NULL;
         return junction2;
     }
 }

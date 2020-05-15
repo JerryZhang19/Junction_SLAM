@@ -11,7 +11,7 @@
 
 namespace simpleslam {
 
-inline Vec2 toVec2(const cv::Point2f p) { return Vec2(p.x, p.y); } //simple helper function
+//inline Vec2 toVec2(const cv::Point2f p) { return Vec2(p.x, p.y); } //simple helper function
 
 Backend::Backend() {
     backend_running_.store(true);

@@ -18,7 +18,7 @@
 
 namespace simpleslam {
 
-inline Vec2 toVec2(const cv::Point2f p) { return Vec2(p.x, p.y); } //simple helper function
+//inline Vec2 toVec2(const cv::Point2f p) { return Vec2(p.x, p.y); } //simple helper function
 
 Frontend::Frontend() {
     gftt_ =
@@ -63,6 +63,8 @@ bool Frontend::AddFrame(simpleslam::Frame::Ptr frame) {
 }
 
 bool Frontend::Track() {
+    //sleep(3);
+
     if (last_frame_) {
         current_frame_->SetPose(relative_motion_ * last_frame_->Pose());
     }
@@ -88,7 +90,7 @@ bool Frontend::Track() {
 
     if (viewer_) viewer_->AddCurrentFrame(current_frame_);
 
-    sleep(0.1);
+
     return true;
 }
 
@@ -136,8 +138,8 @@ int Frontend::InitializeNewPoints()  {
     for (size_t i = 0; i < current_frame_->features_.size(); ++i) {
         if (current_frame_->features_[i]->map_point_.expired()) {
             Vec3 pworld = camera_->pixel2world(current_frame_->features_[i]->get_vec2(),
-                                               camera_->pose_,// Identity SE3
-                                               current_frame_->features_[i]->init_depth_); // use depth sensor only to init
+                                               camera_->pose_,
+                                               current_frame_->features_[i]->init_depth_);
 
             auto new_map_point = MapPoint::CreateNewMappoint();
             pworld = current_pose_Twc * pworld;
@@ -155,13 +157,48 @@ int Frontend::InitializeNewPoints()  {
 int Frontend::InitializeNewJunctions()  {
     SE3 current_pose_Twc = current_frame_->Pose().inverse();
     int cnt_junctions = 0;
-    //do something
-    LOG(INFO) << "InitializeNewJunctions not implemented " ;
+    for (size_t i = 0; i < current_frame_->junctions_.size(); ++i) {
+        if (current_frame_->junctions_[i]->junction3D_.expired()) {
+            // if expired register new junction3D
+
+            const Vec2 position = current_frame_->junctions_[i]->position_;
+            double depth_center = 0.001*current_frame_->depth_.at<unsigned short>(cv::Point2d(position.x(), position.y()));
+            if(depth_center==0)
+                continue;
+
+            Vec3 pworld = camera_->pixel2world(position,
+                                               camera_->pose_,// Identity SE3, camera extrinsics
+                                               depth_center);
+
+            auto new_junction3D = Junction3D::CreateNewJunction3D();
+            pworld = current_pose_Twc * pworld;
+            new_junction3D->SetPos(pworld);
+            // new_junction3D->AddObservation(current_frame_->junctions_[i]);
+            std::vector<Vec3> endpoints3D;
+            for(const auto &endpoint2D : current_frame_->junctions_[i]->endpoints_)
+            {
+                double depth_endpoint = 0.001*current_frame_->depth_.at<unsigned short>(cv::Point2d(endpoint2D.x(), endpoint2D.y()));
+                if(depth_endpoint==0) //if depth is missing, other technique can be used, temporarily ignore this edge
+                    continue;
+                Vec3 endpoint3D = camera_->pixel2world(endpoint2D,
+                                                   camera_->pose_,
+                                                       depth_endpoint);
+                endpoint3D = current_pose_Twc * endpoint3D;
+                endpoints3D.push_back(endpoint3D);
+            }
+            new_junction3D->SetEndpoints(endpoints3D);
+            if(endpoints3D.size()<=1) //ignore line and single point
+                continue;
+            current_frame_->junctions_[i]->junction3D_ = new_junction3D;
+            map_->InsertMapJunction(new_junction3D);
+            cnt_junctions++;
+        }
+    }
+    LOG(INFO) << "new landmarks (junctions): " << cnt_junctions;
     return cnt_junctions;
 }
 
 
-//TODO: Bundle Adjustment of Junction
 int Frontend::EstimateCurrentPose() {
     // setup g2o
     typedef g2o::BlockSolver_6_3 BlockSolverType;
@@ -205,7 +242,7 @@ int Frontend::EstimateCurrentPose() {
     }
 
     // estimate the Pose the determine the outliers
-    const double chi2_th = 80;
+    const double chi2_th = 36;
     int cnt_outlier = 0;
     for (int iteration = 0; iteration < 4; ++iteration) {
         vertex_pose->setEstimate(current_frame_->Pose());
@@ -294,16 +331,19 @@ int Frontend::TrackFeaturePoints() {
 
 int Frontend::TrackJunctions(){
     //TODO: Better parallelism (Future)
-    LOG(INFO)<<"DEBUG info trackjunctions starts";
     for (const auto &junct : last_frame_->junctions_) {
         auto new_junction = TrackJunction(
                 last_frame_->img_,
                 current_frame_->img_,
+                camera_,
+                current_frame_,
                 junct);
+        if(new_junction==NULL)  // can't track this junction
+            continue;
         new_junction->frame_ = current_frame_;
         current_frame_->junctions_.push_back(new_junction);
         }
-    LOG(INFO)<<current_frame_->junctions_.size()<<"Junctions remains";
+    LOG(INFO)<<"REMAINING JUNCTIONS: "<<current_frame_->junctions_.size();
     return current_frame_->junctions_.size();
 }
 
@@ -397,16 +437,28 @@ int Frontend::DetectJunctions() {
     // Register detected junctions
     std::vector<cv::KeyPoint> keypoints;
     int cnt_detected = 0;
-    for (int j = 0; j < junctions_msg.points_size(); j++) {
-        const LCNN::Point &point = junctions_msg.points(j);
-        // std::cout << point.x() << point.y() << point.score() << std::endl;
 
-        cv::Point2d position = {point.x(), point.y()};
+    std::vector<std::pair<Vec2,Vec2>> edges;
+    for (int j = 0; j < junctions_msg.lines_size(); j++) {
+        const LCNN::Line &line = junctions_msg.lines(j);
 
-        int depth = current_frame_->depth_.at<unsigned short>(position);
+        // TODO depth check
+        // int depth1 = current_frame_->depth_.at<unsigned short>(position1);
+        // int depth2 = current_frame_->depth_.at<unsigned short>(position2);
+        // depth1 <= Frame::max_depth && depth1 >= Frame::min_depth
+        //     && depth2 <= Frame::max_depth && depth2 >= Frame::min_depth
 
+        edges.push_back(std::pair<Vec2,Vec2>{{line.point1().x(), line.point1().y()}, {line.point2().x(), line.point2().y()}});
+    }
+
+    std::vector<std::shared_ptr<Junction2D>> junctions = EdgeToJunction(edges);
+
+    current_frame_->junctions_.clear();
+    for (const auto &junction: junctions) {
+        current_frame_->junctions_.push_back(junction);
         cnt_detected++;
     }
+
 }
 
 
