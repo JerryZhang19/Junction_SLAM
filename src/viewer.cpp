@@ -87,7 +87,14 @@ cv::Mat Viewer::PlotFrameImage() {
             cv::circle(img_out, feat->position_.pt, 2, cv::Scalar(0, 250, 0),
                        2);
         }
+        else{
+            auto feat = current_frame_->features_[i];
+            cv::circle(img_out, feat->position_.pt, 2, cv::Scalar(0, 250, 250),
+                       2);
+        }
     }
+
+
     for (const auto& junct:current_frame_->junctions_)
     {
         Vec2 center = junct->position_;
@@ -170,9 +177,9 @@ void Viewer::DrawJunction() {
 
 void Viewer::DrawMapPoints() {
     const float red[3] = {1.0, 0, 0};
-    for (auto& kf : active_keyframes_) {
-        DrawFrame(kf.second, red);
-    }
+    //for (auto& kf : active_keyframes_) {
+    //    DrawFrame(kf.second, red);
+    //}
 
     glPointSize(2);
     glBegin(GL_POINTS);

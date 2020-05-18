@@ -11,6 +11,7 @@
 #include "myslam/common_include.h"
 #include "myslam/frame.h"
 #include "myslam/map.h"
+#include "dataset.h"
 
 namespace simpleslam {
 
@@ -39,6 +40,8 @@ class Frontend {
     void SetBackend(std::shared_ptr<Backend> backend) { backend_ = backend; }
 
     void SetViewer(std::shared_ptr<Viewer> viewer) { viewer_ = viewer; }
+
+    void SetDataset(std::shared_ptr<Dataset> dataset) { dataset_ = dataset; }
 
     FrontendStatus GetStatus() const { return status_; }
 
@@ -127,6 +130,7 @@ class Frontend {
     Frame::Ptr current_frame_ = nullptr;  // 当前帧
     Frame::Ptr last_frame_ = nullptr;     // 上一帧
     Camera::Ptr camera_ = nullptr;   // 左侧相机
+    Dataset::Ptr dataset_ = nullptr;
 
     Map::Ptr map_ = nullptr;
     std::shared_ptr<Backend> backend_ = nullptr;

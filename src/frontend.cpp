@@ -15,6 +15,7 @@
 #include "myslam/map.h"
 #include "myslam/viewer.h"
 #include "myslam/OpticalFlowTracker.h"
+#include <boost/format.hpp>
 
 namespace simpleslam {
 
@@ -58,19 +59,48 @@ bool Frontend::AddFrame(simpleslam::Frame::Ptr frame) {
             break;
     }
 
+    cv::Mat img_out;
+    cv::cvtColor(current_frame_->img_, img_out, cv::COLOR_GRAY2BGR);
+    /*
+    for (size_t i = 0; i < current_frame_->features_.size(); ++i) {
+        if (current_frame_->features_[i]->map_point_.lock()) {
+            auto feat = current_frame_->features_[i];
+            cv::circle(img_out, feat->position_.pt, 2, cv::Scalar(0, 250, 0),
+                       2);
+        }
+    }
+    */
+    for (const auto& junct:current_frame_->junctions_)
+    {
+        Vec2 center = junct->position_;
+        for(auto endpoint:junct->endpoints_)
+            cv::line(img_out,{int(center[0]),int(center[1])},{int(0.4*center[0]+0.6*endpoint[0]),int(0.4*center[1]+0.6*endpoint[1])},cv::Scalar(0, 250, 0),2);
+    }
+    //boost::format out_fmt("%s/f3/%05d.png");
+    //cv::imwrite((out_fmt % "../visualization"  % dataset_->Get_index()).str(),
+    //           img_out);
+
     last_frame_ = current_frame_;
     return true;
 }
 
 bool Frontend::Track() {
-    //sleep(3);
+    //sleep(1);
 
     if (last_frame_) {
         current_frame_->SetPose(relative_motion_ * last_frame_->Pose());
     }
 
     int num_track_points = TrackFeaturePoints();
+
+
+    auto t1 = std::chrono::steady_clock::now();
     int num_track_junctions = TrackJunctions();
+    auto t2 = std::chrono::steady_clock::now();
+    auto time_used =
+            std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+    LOG(INFO) << "track junction cost time: " << time_used.count() << " seconds.";
+
 
     tracking_inliers_ = EstimateCurrentPose();
 
@@ -97,8 +127,12 @@ bool Frontend::Track() {
 bool Frontend::InsertKeyframe() {
     if (tracking_inliers_ >= num_features_needed_for_keyframe_) {
         // still have enough features, don't insert keyframe
+        //if(dataset_->Get_index()==77)
+        //    DetectJunctions();
         return false;
     }
+    //if(dataset_->Get_index()==78||dataset_->Get_index()==79||dataset_->Get_index()==80||dataset_->Get_index()==81)
+    //    return false;
     // current frame is a new keyframe
     current_frame_->SetKeyFrame();
     map_->InsertKeyFrame(current_frame_);

@@ -27,6 +27,7 @@ class Dataset {
     Camera::Ptr GetCamera(int camera_id) const {
         return cameras_.at(camera_id);
     }
+    int Get_index(){return current_image_index_;}
 
    private:
     std::string dataset_path_;
