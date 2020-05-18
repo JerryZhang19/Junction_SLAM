@@ -1,4 +1,4 @@
 # CS 294 course Project
 
 
-See overview.txt
+videos can be found in docs folder
